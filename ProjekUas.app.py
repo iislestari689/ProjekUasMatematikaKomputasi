@@ -72,4 +72,104 @@ with grid1:
 
 with grid2:
     st.markdown('<div style="background: linear-gradient(135deg, #2ecc71 0%, #55efc4 100%); padding: 12px; border-radius: 10px; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.15); text-align: center; margin-bottom: 10px;"><span style="font-size: 18px;">👩‍💻</span><h5 style="margin: 4px 0 0 0; color: white; font-family: \'Poppins\', sans-serif; font-weight: 600; font-size: 14px;">Eka Yuslita Dewi</h5></div>', unsafe_allow_html=True)
-    st.markdown('<div style="background: linear-gradient(135deg, #e17055 0%, #ffbba0 100%); padding: 12px; border-radius: 10px; box-shadow: 0 4px 10px rgba(225, 112, 85, 0.15); text-align: center; margin-
+    st.markdown('<div style="background: linear-gradient(135deg, #e17055 0%, #ffbba0 100%); padding: 12px; border-radius: 10px; box-shadow: 0 4px 10px rgba(225, 112, 85, 0.15); text-align: center; margin-bottom: 10px;"><span style="font-size: 18px;">👩‍💻</span><h5 style="margin: 4px 0 0 0; color: white; font-family: \'Poppins\', sans-serif; font-weight: 600; font-size: 14px;">Siti Fatikhatul Mardiyah</h5></div>', unsafe_allow_html=True)
+
+st.write("---")
+
+# Header Konten Utama
+col_title, col_logo = st.columns([3, 1])
+with col_title:
+    st.subheader("⚖️ Cek Kesehatan Tubuhmu")
+    st.write("Masukkan angka di bawah untuk memeriksa kondisi indeks massa tubuh Anda.")
+with col_logo:
+    if lottie_health:
+        st_lottie(lottie_health, height=100, key="main_logo")
+
+col1, col2 = st.columns(2)
+with col1:
+    berat = st.number_input("Berat badan (kg):", min_value=1.0, value=60.0, step=0.1)
+with col2:
+    tinggi_cm = st.number_input("Tinggi badan (cm):", min_value=50.0, value=165.0, step=1.0)
+
+if st.button("🔍 Hitung BMI", use_container_width=True):
+    if tinggi_cm > 0:
+        with st.spinner("Menghitung BMI kamu..."):
+            progress_bar = st.progress(0)
+            for i in range(100):
+                time.sleep(0.003)
+                progress_bar.progress(i + 1)
+            progress_bar.empty()
+
+        tinggi_m = tinggi_cm / 100
+        bmi = hitung_bmi(berat, tinggi_m)
+        kategori, warna = kategori_bmi(bmi)
+        waktu_cek = datetime.now().strftime("%d-%m-%Y %H:%M")
+
+        st.balloons()
+        
+        res_col1, res_col2 = st.columns(2)
+        with res_col1:
+            st.markdown(
+                f"""
+                <div style="background-color:{warna}; padding:20px; border-radius:10px; text-align:center; color:white; margin-bottom:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h2 style="margin:0; color:white;">BMI Anda: {bmi:.2f}</h2>
+                    <h3 style="margin:5px 0; color:white; font-weight:bold;">{kategori}</h3>
+                    <p style="margin:0; font-size:14px; opacity:0.9;">📅 {waktu_cek}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        with res_col2:
+            if lottie_success:
+                st_lottie(lottie_success, height=140, key="success_anim")
+
+        st.session_state.riwayat.append({
+            "waktu": waktu_cek,
+            "berat": berat,
+            "tinggi_cm": tinggi_cm,
+            "bmi": round(bmi, 2),
+            "kategori": kategori
+        })
+    else:
+        st.error("Tinggi badan harus lebih dari 0!")
+
+if st.session_state.riwayat:
+    st.write("---")
+    st.subheader("📈 Diagram Garis Pengecekan Berkala")
+
+    df = pd.DataFrame(st.session_state.riwayat)
+    df["label_pengecekan"] = "Ke-" + (df.index + 1).astype(str) + " (" + df["waktu"] + ")"
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["label_pengecekan"],
+        y=df["bmi"],
+        mode="lines+markers+text",
+        text=df["bmi"],
+        textposition="top center",
+        line=dict(color="#6c5ce7", width=3, shape="spline"),
+        marker=dict(size=12, color="#6c5ce7", line=dict(width=2, color="white")),
+        name="Nilai BMI Anda"
+    ))
+
+    fig.add_hline(y=18.5, line_dash="dot", line_color="#3498db", annotation_text="Batas Kurus (<18.5)")
+    fig.add_hline(y=25.0, line_dash="dot", line_color="#2ecc71", annotation_text="Batas Normal (18.5-25)")
+    fig.add_hline(y=30.0, line_dash="dot", line_color="#e74c3c", annotation_text="Batas Obesitas (>30)")
+
+    fig.update_layout(
+        xaxis_title="Daftar Riwayat Pengecekan",
+        yaxis_title="Nilai Skor BMI",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(255,255,255,0.6)',
+        template="plotly_white",
+        height=450,
+        margin=dict(l=20, r=20, t=40, b=80)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("👁️ Lihat Tabel Rincian Data"):
+        st.dataframe(df[["waktu", "berat", "tinggi_cm", "bmi", "kategori"]], use_container_width=True)
+
+    if st.button("🗑️ Hapus Semua Riwayat", use_container_width=True):
+        st.session_state.riwayat = []
+        st.rerun()
